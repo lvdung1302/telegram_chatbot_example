@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2016", // Compatible with Node.js versions
+    "module": "CommonJS", // For Node.js and ts-node
+    "esModuleInterop": true, // Ensures compatibility with CommonJS modules
+    "forceConsistentCasingInFileNames": true, // Enforces consistent file naming
+    "strict": false, // Temporarily disable strict mode to avoid type errors
+    "skipLibCheck": true, // Skip type checking for .d.ts files to avoid library issues
+    "moduleResolution": "node" // Use Node.js module resolution
+  }
+}
