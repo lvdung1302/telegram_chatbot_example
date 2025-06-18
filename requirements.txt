@@ -1,0 +1,7 @@
+@langchain/ollama
+@langchain/core
+zod
+axios
+dotenv
+ts-node
+typescript

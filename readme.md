@@ -1,11 +1,13 @@
 # 🛠️ Ollama Tool Example
 
-This project shows how to use **LangChain** with **Ollama** to create tools for querying **flight times** and **weather data**.
+This project shows how to use **LangChain** with **Ollama** to create tools for querying **flight times**, **weather data**, **jokes**, and **news**.
 
-The script (`flight-times.ts`) uses the `mistral-nemo` model to process user queries, calling tools to:
+The script (`main.ts`) uses the `mistral-nemo` model to process user queries, calling tools to:
 
 - Fetch simulated **flight schedules**
 - Fetch real-time **weather data** via the **OpenWeatherMap API**
+- Tell **jokes**
+- Summarize **news headlines**
 
 ---
 
@@ -39,7 +41,7 @@ cd D:\DreamTeam\ollama-tool-example
 Or clone the repo if it exists:
 
 ```powershell
-git clone <repo-url>
+git clone "https://github.com/lvdung1302/ollama-tool-example.git"
 cd ollama-tool-example
 ```
 
@@ -55,9 +57,16 @@ npm init -y
 
 ### 3. Install Dependencies
 
+You can install all required packages with:
+
 ```bash
-npm install @langchain/ollama @langchain/core zod axios
-npm install --save-dev ts-node typescript
+pip install -r requirements.txt
+```
+
+> Or for macOS/Linux:
+
+```bash
+xargs -n 1 npm install < requirements.txt
 ```
 
 ---
@@ -97,9 +106,9 @@ ollama list
 
 ---
 
-### 6. Set Up OpenWeatherMap API Key
+### 6. Set Up API Keys
 
-Update `flight-times.ts` with your API key:
+Update `main.ts` with your API key:
 
 ```ts
 const apiKey = "YOUR_API_KEY"; // Replace this
@@ -108,33 +117,23 @@ const apiKey = "YOUR_API_KEY"; // Replace this
 Or use `.env` for better security:
 
 ```bash
-# Install dotenv
 npm install dotenv
 ```
 
 Create `.env` file:
 
 ```
-WEATHER_API_KEY=your_api_key_here
-NEWS_API_KEY=your_api_key
-```
-
-Update code:
-
-```ts
-import dotenv from "dotenv";
-dotenv.config();
-
-const apiKey = process.env.WEATHER_API_KEY || "default_key";
+WEATHER_API_KEY=your_openweather_key
+NEWS_API_KEY=your_newsapi_key
 ```
 
 ---
 
 ### 7. Update `main.ts`
 
-Ensure your script includes both `get_weather`, `get_joke` and `get_news` tools.
+Ensure your script includes all tools: `get_weather`, `get_joke`, `get_news`, and `get_flight_times`.
 
-To test flight time queries, change this line:
+Test input example:
 
 ```ts
 new HumanMessage({
@@ -147,25 +146,19 @@ new HumanMessage({
 
 ## ▶️ Running the Script
 
-### (Optional) Activate Virtual Environment
+### (Optional) Activate Virtual Environment for Python (if needed)
 
 ```powershell
 python -m venv .venv
-.\venv\Scripts\Activate
-```
-
-### Start Ollama Server (if not running)
-
-```bash
-ollama serve
+.\.venv\Scripts\Activate
 ```
 
 ### Run the Script
 
 ```bash
-npx ts-node flight-times.ts
+npx ts-node main.ts
 ```
 
 ---
 
-✅ You’re ready to go! The model will now use tool calling to respond to weather or flight queries using real data.
+✅ You’re ready to go! The model will now use tool calling to respond to weather, joke, flight, or news queries using real data.
