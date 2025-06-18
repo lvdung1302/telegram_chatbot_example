@@ -1,77 +1,168 @@
-Ollama Tool Example
+# 🛠️ Ollama Tool Example
 
-This project shows how to use LangChain with Ollama to create tools for querying flight times and weather data. The script (flight-times.ts) uses the mistral-nemo model to process user queries, calling tools to fetch flight schedules (simulated) and real-time weather data via the OpenWeatherMap API.
+This project shows how to use **LangChain** with **Ollama** to create tools for querying **flight times** and **weather data**.
 
-Prerequisites
+The script (`flight-times.ts`) uses the `mistral-nemo` model to process user queries, calling tools to:
 
-Node.js: Version 18 or later. Download from https://nodejs.org/.
+- Fetch simulated **flight schedules**
+- Fetch real-time **weather data** via the **OpenWeatherMap API**
 
-Ollama: Install from https://ollama.com/.
+---
 
-OpenWeatherMap API Key: Sign up at https://openweathermap.org/ to get a free API key.
+## 📋 Prerequisites
 
-Windows: This guide assumes you're using Windows (e.g., PowerShell). Adjust commands for other OS if needed.
+- **Node.js**: Version 18 or later  
+  👉 [Download here](https://nodejs.org/)
 
-Internet Connection: Required for downloading dependencies and fetching weather data.
+- **Ollama**:  
+  👉 [Install from Ollama.com](https://ollama.com/)
 
-Setup Instructions
+- **OpenWeatherMap API Key**:  
+  👉 [Sign up for free](https://openweathermap.org/)
 
-Create the Project Directory:
+- **Windows PowerShell** (adjust commands for macOS/Linux if needed)
 
-Open PowerShell and create a folder: mkdir D:\DreamTeam\ollama-tool-example cd D:\DreamTeam\ollama-tool-example
+- **Internet Connection**:  
+  Required for downloading dependencies and fetching weather data.
 
-If this project is on GitHub, clone it instead: git clone cd ollama-tool-example
+---
 
-Initialize Node.js Project:
+## ⚙️ Setup Instructions
 
-Create a package.json file: npm init -y
+### 1. Create the Project Directory
 
-Install Dependencies:
+```powershell
+mkdir D:\DreamTeam\ollama-tool-example
+cd D:\DreamTeam\ollama-tool-example
+```
 
-Install required Node.js packages: npm install @langchain/ollama @langchain/core zod axios npm install --save-dev ts-node typescript
+Or clone the repo if it exists:
 
-Set Up TypeScript Configuration:
+```powershell
+git clone <repo-url>
+cd ollama-tool-example
+```
 
-Create a tsconfig.json file in the project root with this content: { "compilerOptions": { "target": "ES2016", "module": "CommonJS", "esModuleInterop": true, "forceConsistentCasingInFileNames": true, "strict": false, "skipLibCheck": true, "moduleResolution": "node" } }
+---
 
-Install and Configure Ollama:
+### 2. Initialize Node.js Project
 
-Download and install Ollama from https://ollama.com/.
+```bash
+npm init -y
+```
 
-Start the Ollama server in a separate terminal: ollama serve
+---
 
-Pull the mistral-nemo model: ollama pull mistral-nemo
+### 3. Install Dependencies
 
-Verify the model is installed: ollama list
+```bash
+npm install @langchain/ollama @langchain/core zod axios
+npm install --save-dev ts-node typescript
+```
 
-Set Up OpenWeatherMap API Key:
+---
 
-The script uses an API key for weather data. Replace the hardcoded key in flight-times.ts: const apiKey = 'YOUR_API_KEY'; // Replace with your key
+### 4. Set Up TypeScript Configuration
 
-For better security, use a .env file:
+Create a file `tsconfig.json` with the following:
 
-Install dotenv: npm install dotenv
+```json
+{
+  "compilerOptions": {
+    "target": "ES2016",
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "moduleResolution": "node"
+  }
+}
+```
 
-Create a .env file in the project root: WEATHER_API_KEY=your_api_key_here
+---
 
-Update flight-times.ts to use the environment variable: import dotenv from 'dotenv'; dotenv.config(); const apiKey = process.env.WEATHER_API_KEY || 'default_key';
+### 5. Install and Configure Ollama
 
-Create or Update flight-times.ts:
+```bash
+# Start Ollama server in a new terminal
+ollama serve
 
-Ensure flight-times.ts contains the script with both get_flight_times and get_weather tools (use the provided script in the project).
+# Pull model
+ollama pull mistral-nemo
 
-The script queries weather by default. To test flight times, change the query in flight-times.ts: new HumanMessage({ content: 'What is the flight time from New York (NYC) to Los Angeles (LAX)?' })
+# Confirm model is installed
+ollama list
+```
 
-Running the Script
+---
 
-Activate Virtual Environment (Optional):
+### 6. Set Up OpenWeatherMap API Key
 
-If using a virtual environment, activate it: .\venv\Scripts\Activate
+Update `flight-times.ts` with your API key:
 
-Start Ollama Server:
+```ts
+const apiKey = "YOUR_API_KEY"; // Replace this
+```
 
-Ensure the Ollama server is running: ollama serve
+Or use `.env` for better security:
 
-Run the Script:
+```bash
+# Install dotenv
+npm install dotenv
+```
 
-Execute the script using ts-node: npx ts-node main.ts
+Create `.env` file:
+
+```
+WEATHER_API_KEY=your_api_key_here
+```
+
+Update code:
+
+```ts
+import dotenv from "dotenv";
+dotenv.config();
+
+const apiKey = process.env.WEATHER_API_KEY || "default_key";
+```
+
+---
+
+### 7. Update `flight-times.ts`
+
+Ensure your script includes both `get_flight_times` and `get_weather` tools.
+
+To test flight time queries, change this line:
+
+```ts
+new HumanMessage({
+  content: "What is the flight time from New York (NYC) to Los Angeles (LAX)?",
+});
+```
+
+---
+
+## ▶️ Running the Script
+
+### (Optional) Activate Virtual Environment
+
+```powershell
+.\venv\Scripts\Activate
+```
+
+### Start Ollama Server (if not running)
+
+```bash
+ollama serve
+```
+
+### Run the Script
+
+```bash
+npx ts-node flight-times.ts
+```
+
+---
+
+✅ You’re ready to go! The model will now use tool calling to respond to weather or flight queries using real data.
