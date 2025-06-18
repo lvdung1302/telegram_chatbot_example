@@ -116,6 +116,7 @@ Create `.env` file:
 
 ```
 WEATHER_API_KEY=your_api_key_here
+NEWS_API_KEY=your_api_key
 ```
 
 Update code:
@@ -129,15 +130,16 @@ const apiKey = process.env.WEATHER_API_KEY || "default_key";
 
 ---
 
-### 7. Update `flight-times.ts`
+### 7. Update `main.ts`
 
-Ensure your script includes both `get_flight_times` and `get_weather` tools.
+Ensure your script includes both `get_weather`, `get_joke` and `get_news` tools.
 
 To test flight time queries, change this line:
 
 ```ts
 new HumanMessage({
-  content: "What is the flight time from New York (NYC) to Los Angeles (LAX)?",
+  content:
+    "Tell me a joke, give me the current weather in Hanoi, and summarize the latest top news headlines.",
 });
 ```
 
@@ -148,6 +150,7 @@ new HumanMessage({
 ### (Optional) Activate Virtual Environment
 
 ```powershell
+python -m venv .venv
 .\venv\Scripts\Activate
 ```
 
