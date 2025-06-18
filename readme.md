@@ -40,20 +40,19 @@ cd D:\DreamTeam\ollama-tool-example
 
 Or clone the repo if it exists:
 
-```powershell
+```bash
 git clone "https://github.com/lvdung1302/ollama-tool-example.git"
 cd ollama-tool-example
 ```
 
 ---
 
-### 2. Initialize Node.js Project
+### 2. Create enviroments:
 
 ```bash
-npm init -y
+python -m venv .venv
+.\.venv\Scripts\Activate
 ```
-
----
 
 ### 3. Install Dependencies
 
@@ -67,26 +66,6 @@ pip install -r requirements.txt
 
 ```bash
 xargs -n 1 npm install < requirements.txt
-```
-
----
-
-### 4. Set Up TypeScript Configuration
-
-Create a file `tsconfig.json` with the following:
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2016",
-    "module": "CommonJS",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": false,
-    "skipLibCheck": true,
-    "moduleResolution": "node"
-  }
-}
 ```
 
 ---
@@ -148,8 +127,7 @@ new HumanMessage({
 
 ### (Optional) Activate Virtual Environment for Python (if needed)
 
-```powershell
-python -m venv .venv
+```bash
 .\.venv\Scripts\Activate
 ```
 
