@@ -20,6 +20,8 @@ const llm = new ChatOllama({
 });
 const llmWithTools = llm.bindTools([GetWeatherTool, GetJokeTool, GetNewsTool]);
 
+const userMemory = new Map<number, BaseMessage[]>();
+
 async function sendMessage(chatId: number, text: string) {
   await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: 'POST',
@@ -29,32 +31,34 @@ async function sendMessage(chatId: number, text: string) {
 }
 
 async function processMessage(chatId: number, text: string) {
-  const messages: BaseMessage[] = [new HumanMessage({ content: text })];
+  const history = userMemory.get(chatId) || [];
+  history.push(new HumanMessage({ content: text }));
 
-  const response = await llmWithTools.invoke(messages);
+  const response = await llmWithTools.invoke(history);
 
   if (response.tool_calls) {
-    const toolMap = {
-      get_joke: GetJokeTool,
+    const tools = {
       get_weather: GetWeatherTool,
+      get_joke: GetJokeTool,
       get_news: GetNewsTool,
     };
 
     for (const toolCall of response.tool_calls) {
-      const tool = toolMap[toolCall.name];
+      const tool = tools[toolCall.name];
       if (!tool) continue;
       const result = await tool.invoke(toolCall.args);
-      messages.push(
-          new ToolMessage({
+      history.push(
+        new ToolMessage({
           content: result,
           name: toolCall.name,
-          tool_call_id: toolCall.id, 
+          tool_call_id: toolCall.id,
         })
       );
     }
   }
 
-  const finalResponse = await llmWithTools.invoke(messages);
+  const finalResponse = await llmWithTools.invoke(history);
+  userMemory.set(chatId, history); // 🔁 lưu lại toàn bộ history cho lần sau
   await sendMessage(chatId, String(finalResponse.content));
 }
 
