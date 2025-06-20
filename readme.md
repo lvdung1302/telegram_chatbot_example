@@ -34,15 +34,15 @@ The script (`main.ts`) uses the `mistral-nemo` model to process user queries, ca
 ### 1. Create the Project Directory
 
 ```powershell
-mkdir D:\DreamTeam\ollama-tool-example
-cd D:\DreamTeam\ollama-tool-example
+mkdir D:\DreamTeam\telegram_chatbot_example
+cd D:\DreamTeam\telegram_chatbot_example
 ```
 
 Or clone the repo if it exists:
 
 ```bash
-git clone "https://github.com/lvdung1302/ollama-tool-example.git"
-cd ollama-tool-example
+git clone "https://github.com/lvdung1302/telegram_chatbot_example.git"
+cd telegram_chatbot_example
 ```
 
 ---
@@ -87,13 +87,8 @@ ollama list
 
 ### 6. Set Up API Keys
 
-Update `main.ts` with your API key:
-
-```ts
-const apiKey = "YOUR_API_KEY"; // Replace this
-```
-
-Or use `.env` for better security:
+Update `telegram_bot.ts` with your API key:
+use `.env` for better security:
 
 ```bash
 npm install dotenv
@@ -104,21 +99,7 @@ Create `.env` file:
 ```
 WEATHER_API_KEY=your_openweather_key
 NEWS_API_KEY=your_newsapi_key
-```
-
----
-
-### 7. Update `main.ts`
-
-Ensure your script includes all tools: `get_weather`, `get_joke`, `get_news`, and `get_flight_times`.
-
-Test input example:
-
-```ts
-new HumanMessage({
-  content:
-    "Tell me a joke, give me the current weather in Hanoi, and summarize the latest top news headlines.",
-});
+TELEGRAM_TOKEN=your_telegram_key
 ```
 
 ---
@@ -134,7 +115,7 @@ new HumanMessage({
 ### Run the Script
 
 ```bash
-npx ts-node main.ts
+npx ts-node telegram_bot.ts
 ```
 
 ---

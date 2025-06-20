@@ -5,3 +5,4 @@ axios
 dotenv
 ts-node
 typescript
+node-fetch@2

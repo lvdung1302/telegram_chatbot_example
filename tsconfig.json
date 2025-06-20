@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2016", // Compatible with Node.js versions
-    "module": "CommonJS", // For Node.js and ts-node
-    "esModuleInterop": true, // Ensures compatibility with CommonJS modules
-    "forceConsistentCasingInFileNames": true, // Enforces consistent file naming
-    "strict": false, // Temporarily disable strict mode to avoid type errors
-    "skipLibCheck": true, // Skip type checking for .d.ts files to avoid library issues
-    "moduleResolution": "node" // Use Node.js module resolution
-  }
+    "target": "ES2020",                      // Hỗ trợ async/await tốt hơn
+    "module": "CommonJS",                   // Node.js xài CommonJS
+    "esModuleInterop": true,                // Cho phép import mặc định từ node-fetch@2
+    "moduleResolution": "node",             // Dành cho import từ node_modules
+    "skipLibCheck": true,                   // Bỏ qua check types trong thư viện
+    "forceConsistentCasingInFileNames": true,
+    "strict": false,
+    "outDir": "dist"                        // Nơi xuất file .js sau khi build
+  },
+  "include": ["*.ts", "tools/**/*.ts"]
 }
