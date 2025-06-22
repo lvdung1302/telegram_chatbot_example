@@ -1,13 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2020",                      // Hỗ trợ async/await tốt hơn
-    "module": "CommonJS",                   // Node.js xài CommonJS
-    "esModuleInterop": true,                // Cho phép import mặc định từ node-fetch@2
-    "moduleResolution": "node",             // Dành cho import từ node_modules
-    "skipLibCheck": true,                   // Bỏ qua check types trong thư viện
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2020",            // ✅ Để dùng async/await tốt
+    "module": "esnext",            // ✅ Để support top-level await
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "strict": false,
-    "outDir": "dist"                        // Nơi xuất file .js sau khi build
+    "outDir": "dist"
   },
-  "include": ["*.ts", "tools/**/*.ts"]
+  "include": ["*.ts", "tools/**/*.ts", "memory.ts"]
 }

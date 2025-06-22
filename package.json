@@ -1,25 +1,26 @@
 {
-  "name": "ollama-tool-example",
+  "name": "telegram_chatbot_example",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "tsx telegram_bot.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@langchain/core": "^0.3.59",
-    "@langchain/ollama": "^0.2.2",
+    "@langchain/community": "^0.0.49",
+    "@langchain/core": "^0.3.61",
+    "@langchain/ollama": "^0.2.3",
+    "@langchain/openai": "^0.5.15",
+    "@qdrant/js-client-rest": "^1.14.1",
     "axios": "^1.10.0",
     "dotenv": "^16.5.0",
     "node-fetch": "^2.7.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
+    "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {
-    "@types/node": "^24.0.3"
+    "@types/node": "^20.4.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.8.3"
   }
 }

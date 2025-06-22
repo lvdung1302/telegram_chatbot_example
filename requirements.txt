@@ -1,5 +1,7 @@
-@langchain/ollama
+@qdrant/js-client-rest
 @langchain/core
+@langchain/community
+@langchain/ollama
 zod
 axios
 dotenv
