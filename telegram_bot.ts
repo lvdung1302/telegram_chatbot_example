@@ -19,10 +19,18 @@ import {
   addKnowledgeVector,
   searchRelevantKnowledge,
   initQdrant,
+  searchRelevantKnowledgeFromCollection,
 } from './qdrant';
+import { getTelegramFileUrl } from './getTelegramFileUrl';
+import { extractTextFromFile } from './extractTextFromFile';
+import { processFileUpload } from './processFileUpload';
+
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}`;
 const userMemory = new Map<number, BaseMessage[]>(); // memory theo chatId
+const userFileMap = new Map<number, string>(); // <chatId, fileId>
+const userLastFileMap = new Map<number, string>(); // <chatId, lastUsedFileId>
+const fileCollectionMap = new Map<string, string>();
 
 const llm = new ChatOllama({
   baseUrl: 'http://localhost:11434',
@@ -48,7 +56,7 @@ async function sendMessage(chatId: number, text: string) {
 }
 
 async function processMessage(chatId: number, text: string) {
-  // Nếu là lệnh thêm kiến thức
+  // 1. /add-knowledge
   if (text.startsWith('/add-knowledge')) {
     const content = text.replace('/add-knowledge', '').trim();
     if (!content) {
@@ -62,26 +70,52 @@ async function processMessage(chatId: number, text: string) {
     return;
   }
 
+  // 2. /use-file <fileId>
+  if (text.startsWith('/use-file')) {
+    const fileId = text.replace('/use-file', '').trim();
+    if (!fileId) {
+      await sendMessage(chatId, '❗ Please provide a fileId. Usage: /use-file <fileId>');
+      return;
+    }
+
+    userFileMap.set(chatId, fileId);
+    await sendMessage(chatId, `📎 Using file with ID: ${fileId} for future questions.`);
+    return;
+  }
+
+  // 3. Load memory và embedding
   const history = userMemory.get(chatId) || [];
-
-  // 1. Tìm lại kiến thức từ Qdrant theo vector
   const queryVector = await generateEmbedding(text);
-  const memories = await searchRelevantKnowledge(chatId, queryVector);
 
+  // 3.1. Tìm knowledge của user (từ /add-knowledge)
+  const memories = await searchRelevantKnowledge(chatId, queryVector);
   if (memories.length > 0) {
     const memoryText = memories
-      .map((m, i) => `Relevant info [${i + 1}]: ${m}`)
+      .map((m, i) => `Relevant info [user-${i + 1}]: ${m}`)
       .join('\n');
     history.push(new SystemMessage(memoryText));
   }
 
-  // 2. Thêm message người dùng
+  // ✅ 3.2. Tìm knowledge từ file Qdrant nếu có collectionName
+  const collectionName = userFileMap.get(chatId) || userLastFileMap.get(chatId);
+  if (collectionName) {
+    const memories = await searchRelevantKnowledgeFromCollection(collectionName, queryVector);
+
+    if (memories.length > 0) {
+      const memoryText = memories
+        .map((m, i) => `Relevant info [file-${i + 1}]: ${m}`)
+        .join('\n');
+      history.push(new SystemMessage(memoryText));
+    }
+  }
+
+  // 4. Thêm message người dùng
   history.push(new HumanMessage({ content: text }));
 
-  // 3. Gọi LLM với tool
+  // 5. Gọi LLM với tool
   const response = await llmWithTools.invoke(history);
 
-  // 4. Nếu có gọi tool, xử lý tool call
+  // 6. Nếu có gọi tool, xử lý tool call và lưu vào Qdrant
   if (response.tool_calls) {
     const toolMap = {
       get_weather: GetWeatherTool,
@@ -92,7 +126,9 @@ async function processMessage(chatId: number, text: string) {
     for (const toolCall of response.tool_calls) {
       const tool = toolMap[toolCall.name];
       if (!tool) continue;
+
       const result = await tool.invoke(toolCall.args);
+
       history.push(
         new ToolMessage({
           content: result,
@@ -106,11 +142,14 @@ async function processMessage(chatId: number, text: string) {
     }
   }
 
+  // 7. Trả lời người dùng
   const finalResponse = await llmWithTools.invoke(history);
   await sendMessage(chatId, String(finalResponse.content));
 
-  userMemory.set(chatId, history); // lưu memory
+  // 8. Cập nhật memory
+  userMemory.set(chatId, history);
 }
+
 
 async function startPolling() {
   await initQdrant(); // tạo collection nếu chưa có
@@ -126,9 +165,32 @@ async function startPolling() {
     for (const update of data.result || []) {
       offset = update.update_id;
       const message = update.message;
+      const chatId = message?.chat?.id;
+
+      // 📦 1. Nếu là file gửi lên Telegram
+      if (message?.document) {
+        const fileId = message.document.file_id;
+        const fileName = message.document.file_name;
+        const fileUrl = await getTelegramFileUrl(fileId);
+
+        console.log(`📥 Downloading ${fileName} from: ${fileUrl}`);
+
+        const fileBuffer = await fetch(fileUrl).then(res => res.buffer());
+
+        await sendMessage(chatId, `✅ File "${fileName}" received. Processing...`);
+
+        const collectionName = await processFileUpload(chatId, fileId, fileName, fileBuffer, sendMessage);
+
+        if (collectionName) {
+          userLastFileMap.set(chatId, collectionName); // ✅ Ghi nhớ collection để truy vấn sau
+        }
+
+        continue; 
+      }
+      
+      // 💬 2. Nếu là tin nhắn văn bản thì xử lý như cũ
       if (message?.text) {
-        console.log('💬 Message received:', message.text);
-        await processMessage(message.chat.id, message.text);
+        await processMessage(chatId, message.text);
       }
     }
   }

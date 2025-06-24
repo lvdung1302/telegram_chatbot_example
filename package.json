@@ -13,9 +13,12 @@
     "@qdrant/js-client-rest": "^1.14.1",
     "axios": "^1.10.0",
     "dotenv": "^16.5.0",
+    "mammoth": "^1.9.1",
     "node-fetch": "^2.7.0",
+    "pdf-parse": "^1.1.1",
     "ts-node": "^10.9.2",
     "uuid": "^11.1.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.67"
   },
   "devDependencies": {
