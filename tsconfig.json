@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
-    "target": "ES2020",            // ✅ Để dùng async/await tốt
-    "module": "esnext",            // ✅ Để support top-level await
+    "target": "ES2020",
+    "module": "esnext",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": false,
-    "outDir": "dist"
+    "outDir": "dist",
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": ["node"]  // ⬅️ Thêm để hỗ trợ import node, fetch, buffer v.v
   },
   "include": ["*.ts", "tools/**/*.ts", "memory.ts"]
 }

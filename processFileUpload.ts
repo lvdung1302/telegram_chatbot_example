@@ -1,9 +1,11 @@
-import { getCollectionNameFromFile } from './utils';
 import { extractTextFromFile } from './extractTextFromFile';
 import { splitText } from './splitText';
 import { generateEmbedding } from './embed';
-import { client } from './qdrant'; // hoặc export client nếu bạn chưa
+import { createUserCollectionIfNotExists, addToUserCollection } from './chromadb';
 
+/**
+ * Xử lý file upload: extract ➜ split ➜ embed ➜ lưu vào ChromaDB
+ */
 export async function processFileUpload(
   chatId: number,
   fileId: string,
@@ -16,48 +18,24 @@ export async function processFileUpload(
     const text = await extractTextFromFile(buffer, fileName);
     const chunks = splitText(text);
 
-    const collectionName = getCollectionNameFromFile(chatId, buffer);
+    // 🆕 Tạo collection cho user nếu chưa có
+    await createUserCollectionIfNotExists(chatId);
 
-    // 🔍 Check nếu collection đã tồn tại
-    let exists = false;
-    try {
-      await client.getCollection(collectionName);
-      exists = true;
-    } catch {
-      await client.createCollection(collectionName, {
-        vectors: {
-          size: 1024,
-          distance: 'Cosine',
-        },
-      });
-      console.log(`✅ Created collection: ${collectionName}`);
-    }
-
-    // ❗ Nếu đã tồn tại → bỏ qua insert, báo user
-    if (exists) {
-      await sendMessage(chatId, `📦 This file "${fileName}" has already been processed.`);
-      return collectionName;
-    }
-
-    // 🧠 Insert new vectors
+    // 🧠 Embed và insert từng chunk vào collection của user
     for (const chunk of chunks) {
       const vector = await generateEmbedding(chunk);
-      await client.upsert(collectionName, {
-        points: [
-          {
-            id: crypto.randomUUID(),
-            vector,
-            payload: { text: chunk },
-          },
-        ],
-      });
+      await addToUserCollection(chatId, chunk, vector);
     }
 
-    await sendMessage(chatId, `✅ File "${fileName}" has been indexed and saved to collection: ${collectionName}`);
-    return collectionName;
+    await sendMessage(
+      chatId,
+      `✅ File "${fileName}" đã được xử lý và lưu vào knowledge base của bạn.`
+    );
+
+    return fileName;
   } catch (err) {
     console.error('❌ Error processing file:', err);
-    await sendMessage(chatId, `❌ Failed to process file "${fileName}"`);
+    await sendMessage(chatId, `❌ Không thể xử lý file "${fileName}".`);
     return '';
   }
 }

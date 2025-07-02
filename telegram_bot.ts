@@ -1,3 +1,4 @@
+// ✅ telegram_bot.ts - Telegram Bot sử dụng Ollama + ChromaDB (API v2)
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -15,107 +16,73 @@ import { GetWeatherTool } from './tools/weatherTool';
 import { GetNewsTool } from './tools/newsTool';
 
 import { generateEmbedding } from './embed';
-import {
-  addKnowledgeVector,
-  searchRelevantKnowledge,
-  initQdrant,
-  searchRelevantKnowledgeFromCollection,
-} from './qdrant';
 import { getTelegramFileUrl } from './getTelegramFileUrl';
 import { extractTextFromFile } from './extractTextFromFile';
-import { processFileUpload } from './processFileUpload';
-
+import {
+  addKnowledgeToChroma,
+  searchKnowledgeFromChroma,
+  listKnowledgeFromChroma,
+  ensureDatabaseAndCollection,
+} from './chromadb';
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}`;
-const userMemory = new Map<number, BaseMessage[]>(); // memory theo chatId
-const userFileMap = new Map<number, string>(); // <chatId, fileId>
-const userLastFileMap = new Map<number, string>(); // <chatId, lastUsedFileId>
-const fileCollectionMap = new Map<string, string>();
+const userMemory = new Map<number, BaseMessage[]>();
+const userLastFileMap = new Map<number, string>();
 
 const llm = new ChatOllama({
   baseUrl: 'http://localhost:11434',
-  model: 'mistral-nemo', // hoặc llama3.1
+  model: 'mistral-nemo',
   temperature: 0,
   verbose: true,
 });
-const llmWithTools = llm.bindTools([
-  GetWeatherTool,
-  GetJokeTool,
-  GetNewsTool,
-]);
+const llmWithTools = llm.bindTools([GetWeatherTool, GetJokeTool, GetNewsTool]);
 
 async function sendMessage(chatId: number, text: string) {
   await fetch(`${TELEGRAM_API}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-    }),
+    body: JSON.stringify({ chat_id: chatId, text }),
   });
 }
 
 async function processMessage(chatId: number, text: string) {
-  // 1. /add-knowledge
+  const collection = String(chatId);
+  await ensureDatabaseAndCollection(collection);
+
   if (text.startsWith('/add-knowledge')) {
     const content = text.replace('/add-knowledge', '').trim();
     if (!content) {
       await sendMessage(chatId, '❗ Please provide content to add.');
       return;
     }
-
-    const vector = await generateEmbedding(content);
-    await addKnowledgeVector(chatId, content, vector);
+    const embedding = await generateEmbedding(content);
+    await addKnowledgeToChroma(collection, content, embedding);
     await sendMessage(chatId, '✅ Knowledge added successfully!');
     return;
   }
 
-  // 2. /use-file <fileId>
-  if (text.startsWith('/use-file')) {
-    const fileId = text.replace('/use-file', '').trim();
-    if (!fileId) {
-      await sendMessage(chatId, '❗ Please provide a fileId. Usage: /use-file <fileId>');
-      return;
+  if (text === '/list-knowledge') {
+    const docs = await listKnowledgeFromChroma(collection);
+    if (docs.length === 0) {
+      await sendMessage(chatId, 'ℹ️ No knowledge found in memory.');
+    } else {
+      const result = docs.map((d, i) => `#${i + 1}: ${d}`).join('\n');
+      await sendMessage(chatId, `🧠 Knowledge in memory:\n\n${result}`);
     }
-
-    userFileMap.set(chatId, fileId);
-    await sendMessage(chatId, `📎 Using file with ID: ${fileId} for future questions.`);
     return;
   }
 
-  // 3. Load memory và embedding
   const history = userMemory.get(chatId) || [];
-  const queryVector = await generateEmbedding(text);
-
-  // 3.1. Tìm knowledge của user (từ /add-knowledge)
-  const memories = await searchRelevantKnowledge(chatId, queryVector);
-  if (memories.length > 0) {
-    const memoryText = memories
-      .map((m, i) => `Relevant info [user-${i + 1}]: ${m}`)
-      .join('\n');
+  const queryEmbedding = await generateEmbedding(text);
+  const related = await searchKnowledgeFromChroma(collection, queryEmbedding);
+  if (related.length > 0) {
+    const memoryText = related.map((m, i) => `Relevant: ${m}`).join('\n');
     history.push(new SystemMessage(memoryText));
   }
 
-  // ✅ 3.2. Tìm knowledge từ file Qdrant nếu có collectionName
-  const collectionName = userFileMap.get(chatId) || userLastFileMap.get(chatId);
-  if (collectionName) {
-    const memories = await searchRelevantKnowledgeFromCollection(collectionName, queryVector);
-
-    if (memories.length > 0) {
-      const memoryText = memories
-        .map((m, i) => `Relevant info [file-${i + 1}]: ${m}`)
-        .join('\n');
-      history.push(new SystemMessage(memoryText));
-    }
-  }
-
-  // 4. Thêm message người dùng
   history.push(new HumanMessage({ content: text }));
-
-  // 5. Gọi LLM với tool
   const response = await llmWithTools.invoke(history);
 
-  // 6. Nếu có gọi tool, xử lý tool call và lưu vào Qdrant
   if (response.tool_calls) {
     const toolMap = {
       get_weather: GetWeatherTool,
@@ -128,38 +95,29 @@ async function processMessage(chatId: number, text: string) {
       if (!tool) continue;
 
       const result = await tool.invoke(toolCall.args);
+      const resultEmbedding = await generateEmbedding(result);
 
-      history.push(
-        new ToolMessage({
-          content: result,
-          name: toolCall.name,
-          tool_call_id: toolCall.id,
-        })
-      );
+      history.push(new ToolMessage({
+        content: result,
+        name: toolCall.name,
+        tool_call_id: toolCall.id,
+      }));
 
-      const autoMemoryVector = await generateEmbedding(result);
-      await addKnowledgeVector(chatId, result, autoMemoryVector);
+      await addKnowledgeToChroma(collection, result, resultEmbedding);
     }
   }
 
-  // 7. Trả lời người dùng
   const finalResponse = await llmWithTools.invoke(history);
   await sendMessage(chatId, String(finalResponse.content));
-
-  // 8. Cập nhật memory
   userMemory.set(chatId, history);
 }
 
-
 async function startPolling() {
-  await initQdrant(); // tạo collection nếu chưa có
   let offset = 0;
   console.log('🚀 Bot started, waiting for messages...');
 
   while (true) {
-    const res = await fetch(
-      `${TELEGRAM_API}/getUpdates?offset=${offset + 1}&timeout=30`
-    );
+    const res = await fetch(`${TELEGRAM_API}/getUpdates?offset=${offset + 1}&timeout=30`);
     const data = await res.json();
 
     for (const update of data.result || []) {
@@ -167,28 +125,28 @@ async function startPolling() {
       const message = update.message;
       const chatId = message?.chat?.id;
 
-      // 📦 1. Nếu là file gửi lên Telegram
       if (message?.document) {
         const fileId = message.document.file_id;
         const fileName = message.document.file_name;
         const fileUrl = await getTelegramFileUrl(fileId);
 
         console.log(`📥 Downloading ${fileName} from: ${fileUrl}`);
-
         const fileBuffer = await fetch(fileUrl).then(res => res.buffer());
-
         await sendMessage(chatId, `✅ File "${fileName}" received. Processing...`);
 
-        const collectionName = await processFileUpload(chatId, fileId, fileName, fileBuffer, sendMessage);
+        const textContent = await extractTextFromFile(fileBuffer, fileName);
+        
+        const embedding = await generateEmbedding(textContent);
 
-        if (collectionName) {
-          userLastFileMap.set(chatId, collectionName); // ✅ Ghi nhớ collection để truy vấn sau
-        }
+        await ensureDatabaseAndCollection(String(chatId));
+        await addKnowledgeToChroma(String(chatId), textContent, embedding);
 
-        continue; 
+        await sendMessage(chatId, `📄 Text from "${fileName}" added to knowledge base.`);
+
+        userLastFileMap.set(chatId, fileId);
+        continue;
       }
-      
-      // 💬 2. Nếu là tin nhắn văn bản thì xử lý như cũ
+
       if (message?.text) {
         await processMessage(chatId, message.text);
       }

@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  chromadb:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8000:8000"  # Chroma server REST API (v2)
+    volumes:
+      - ./chroma_data:/data  # Dữ liệu sẽ nằm trong thư mục ./chroma_data ở máy bạn
+    environment:
+      - IS_PERSISTENT=TRUE  # Bật lưu dữ liệu
+      - ANONYMIZED_TELEMETRY=FALSE  # Tắt gửi dữ liệu usage
+    restart: unless-stopped
+
+volumes:
+  chroma_data: {}

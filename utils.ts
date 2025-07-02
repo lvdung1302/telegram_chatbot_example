@@ -4,3 +4,7 @@ export function getCollectionNameFromFile(chatId: number, fileBuffer: Buffer): s
   const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex').slice(0, 16);
   return `telegram_file_${chatId}_${fileHash}`;
 }
+
+export function getCollectionName(chatId: number): string {
+  return `telegram_user_${chatId}`;
+}

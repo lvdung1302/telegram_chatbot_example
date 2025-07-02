@@ -18,6 +18,7 @@ export async function extractTextFromFile(buffer: Buffer, fileName: string): Pro
       return extractFromXlsx(buffer);
 
     case 'txt':
+    case 'md': // ✅ Thêm dòng này để hỗ trợ file Markdown
       return buffer.toString('utf-8');
 
     default:
